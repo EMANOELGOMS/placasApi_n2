@@ -5,12 +5,11 @@ import { placas } from "../interface/interface_placa";
 
 const rotas_placas = express.Router();
 
-//adicionar placas
+//adicionar uma nova placa
 rotas_placas.post("/cadastroPlaca", async (req: Request, res: Response) => {
   try {
     const db = await connectToDatabase();
     const newPlaca: placas = req.body;
-    console.log(newPlaca);
 
     await db.collection("placas").insertOne(newPlaca);
     const placaNova = await db.collection("placas").find({}).toArray();
@@ -20,22 +19,24 @@ rotas_placas.post("/cadastroPlaca", async (req: Request, res: Response) => {
   }
 });
 
+//exibe a placa passada na rota
 rotas_placas.get("/consulta/:placa", async (req: Request, res: Response) => {
+  const placaFilter = req.params.placa;
   try {
-    const db = await connectToDatabase(); //conexão com o banco
-    const placa_filter = req.params.placa;
-    console.log(placa_filter);
+    const db = await connectToDatabase();
+    console.log("Placa filtrada:", placaFilter);
 
-    const placa = await db.collection("placas").find({}).toArray();
-    console.log(placa);
+    const placa = await db.collection("placas").findOne({ placa: placaFilter });
+    console.log("Placa encontrada:", placa);
 
     if (placa) {
       return res.json(placa);
     } else {
-      return res.send({ message: "Placa não encotrada" });
+      return res.status(404).send({ message: "Placa não encontrada" });
     }
-  } catch (error) {
-    res.status(500).json({ message: `Erro ao consultar placa ${error}` });
+  } catch (err) {
+    console.error("Erro ao consultar placa:", err);
+    res.status(500).json({ message: `Erro ao consultar placa: ${err}` });
   }
 });
 
