@@ -45,8 +45,21 @@ rotas_placas.get("/consulta/:placa", async (req: Request, res: Response) => {
 });
 
 // get com os relatorios
-rotas_placas.get("/relatorio/cidade/:cidade", (req: Request, res: Response) => {
-  // informações de número da placa, cidade, data e hora dos registros com uma determinada cidade passada no parâmetro
-});
+rotas_placas.get(
+  "/relatorio/cidade/:cidade",
+  async (req: Request, res: Response) => {
+    // informações de número da placa, cidade, data e hora dos registros com uma determinada cidade passada no parâmetro
+    const cidade = req.params.cidade;
+
+    try {
+      const db = await connectToDatabase();
+      // const placaData = await db
+      //   .collection("placas")
+      //   .findOne({ cidade: cidade, data: { $gte: dataFormatada } });
+    } catch (err) {
+      res.status(500).json({ message: `Erro ao consultar relatório: ${err}` });
+    }
+  }
+);
 
 export default rotas_placas;
