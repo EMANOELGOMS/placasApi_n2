@@ -24,9 +24,13 @@ rotas_placas.get("/consulta/:placa", async (req: Request, res: Response) => {
   const placaFilter = req.params.placa;
   try {
     const db = await connectToDatabase();
+
     console.log("Placa filtrada:", placaFilter);
 
-    const placa = await db.collection("placas").findOne({ placa: placaFilter });
+    const filtrandoPlaca = { num_placa: placaFilter };
+
+    const placa = await db.collection("placas").findOne(filtrandoPlaca);
+
     console.log("Placa encontrada:", placa);
 
     if (placa) {
