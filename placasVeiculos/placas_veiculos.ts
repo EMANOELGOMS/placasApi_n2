@@ -44,38 +44,11 @@ rotas_placas.get("/consulta/:placa", async (req: Request, res: Response) => {
   }
 });
 
-// rotas_placas.get(
-//   "/relatorio/cidade/:cidade",
-//   async (req: Request, res: Response) => {
-//     const doc = require("fs");
-//     let Document_PDF = "pdfkit";
-
-//     // informações de número da placa, cidade, data e hora dos registros com uma determinada cidade passada no parâmetro
-//     const cidadeFiltrada = req.params.cidade;
-
-//     try {
-//       const db = await connectToDatabase();
-//       console.log("Cidade filtrada", cidadeFiltrada);
-
-//       const placaData = await db
-//         .collection("placas")
-//         .findOne({ cidade: cidadeFiltrada });
-
-//       if (placaData) {
-//         return res.json(placaData);
-//       } else {
-//         return res.status(404).send({ message: "Placa não encontrada" });
-//       }
-//     } catch (err) {
-//       res.status(500).json({ message: `Erro ao consultar relatório: ${err}` });
-//     }
-//   }
-// );
-
 rotas_placas.get(
   "/relatorio/cidade/:cidade",
   async (req: Request, res: Response) => {
     const cidadeFiltrada = req.params.cidade;
+
     const fs = require("fs");
     var PDFDocument = require("pdfkit");
 
@@ -108,13 +81,11 @@ rotas_placas.get(
         doc.text(`Data: ${placaData.data_registro}`);
         doc.text(`Hora: ${placaData.horario_registro}`);
         doc.text(`Foto: ${placaData.foto}`);
-        // Continue adicionando mais informações conforme necessário
 
-        // Finaliza o documento e envia como resposta
         doc.pipe(res);
         doc.end();
       } else {
-        return res.status(404).send({ message: "Placa não encontrada" });
+        return res.status(404).send({ message: "Nenhum registro encontrado" });
       }
     } catch (err) {
       res.status(500).json({ message: `Erro ao consultar relatório: ${err}` });
@@ -123,20 +94,3 @@ rotas_placas.get(
 );
 
 export default rotas_placas;
-
-// const fs = require("fs");
-// let relatorio_PDF = require("pdfkit");
-
-// let doc = new relatorio_PDF();
-// doc.fontSize(20).text('Relatório de Placa', 100, 100);
-// doc.fontSize(15).text('Placa: ' + placaFilter, 100,120);
-// doc.save('relatorio.pdf');
-
-// fs.readFile('relatorio.pdf', (err, data) => {
-//   if (err) {
-//     res.status(500).json({ message: `Erro ao gerar relatório ${err}`
-//     });
-//   } else {
-//     res.download('relatorio.pdf', 'relatorio.pdf');
-//   }
-// });

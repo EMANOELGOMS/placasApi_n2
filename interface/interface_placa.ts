@@ -13,8 +13,6 @@ export interface placas {
   num_placa: string;
   cidade: string;
   foto: string;
-  // horatio do registro
   horario_registro: string;
-  // horario da data
   data_registro: string;
 }
