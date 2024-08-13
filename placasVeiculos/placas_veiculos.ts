@@ -9,13 +9,20 @@ const rotas_placas = express.Router();
 rotas_placas.post("/cadastroPlaca", async (req: Request, res: Response) => {
   try {
     const db = await connectToDatabase();
-    const newPlaca: placas = req.body;
+
+    const agora = new Date();
+
+    const newPlaca: placas = {
+      ...req.body,
+      horario_registro: agora.toLocaleTimeString("pt-BR"), // Horário do registro
+      data_registro: agora.toLocaleDateString("pt-BR"), // Data registro
+    };
 
     await db.collection("placas").insertOne(newPlaca);
     const placaNova = await db.collection("placas").find({}).toArray();
     return res.json(placaNova);
   } catch (err) {
-    res.status(500).json({ message: `Erro ao cadastrar placa ${err}` });
+    res.status(500).json({ message: `Erro ao cadastrar placa: ${err}` });
   }
 });
 
@@ -49,7 +56,7 @@ rotas_placas.get(
   async (req: Request, res: Response) => {
     const cidadeFiltrada = req.params.cidade;
 
-    const fs = require("fs");
+    //const fs = require("fs");
     var PDFDocument = require("pdfkit");
 
     try {
@@ -71,15 +78,15 @@ rotas_placas.get(
         res.setHeader("Content-type", "application/pdf");
 
         // Criar o conteúdo do PDF
-        doc.fontSize(25).text("Relatório de Placas", { align: "center" });
+        doc.fontSize(25).text("Relatório da Placa", { align: "center" });
         doc.moveDown();
         doc.fontSize(16).text(`Cidade: ${cidadeFiltrada}`);
         doc.moveDown();
 
         // Adiciona informações da placa ao PDF
-        doc.fontSize(14).text(`Número da Placa: ${placaData.num_placa}`);
-        doc.text(`Data: ${placaData.data_registro}`);
-        doc.text(`Hora: ${placaData.horario_registro}`);
+        doc.fontSize(14).text(`Placa: ${placaData.num_placa}`);
+        doc.text(`Data do registro: ${placaData.data_registro}`);
+        doc.text(`Horario do registro: ${placaData.horario_registro}`);
         doc.text(`Foto: ${placaData.foto}`);
 
         doc.pipe(res);
