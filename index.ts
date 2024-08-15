@@ -17,6 +17,6 @@ connectToDatabase()
     });
   })
   .catch((err) => {
-    console.error("Failed to connect to the database", err);
+    console.error("Falha ao conectar no banco de dados", err);
     process.exit(1);
   });
