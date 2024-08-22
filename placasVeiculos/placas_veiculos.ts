@@ -1,30 +1,105 @@
+import express, { Request, response, Response } from "express";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
 import { connectToDatabase } from "../database/databaseConfig";
-import { Request, Response } from "express";
-import express from "express";
 import { placas } from "../interface/interface_placa";
 
 const rotas_placas = express.Router();
 
-//adicionar uma nova placa
-rotas_placas.post("/cadastroPlaca", async (req: Request, res: Response) => {
-  try {
-    const db = await connectToDatabase();
+const upload = multer({ dest: "uploads/" });
 
-    const agora = new Date();
+// POST /cadastroPlaca - Adicionar uma nova placa com OCR
+rotas_placas.post(
+  "/cadastroPlaca",
+  upload.single("foto"),
+  async (req: Request, res: Response) => {
+    try {
+      const db = await connectToDatabase();
+      const { cidade } = req.body;
 
-    const newPlaca: placas = {
-      ...req.body,
-      horario_registro: agora.toLocaleTimeString("pt-BR"), // Horário do registro
-      data_registro: agora.toLocaleDateString("pt-BR"), // Data registro
-    };
+      console.log(cidade);
 
-    await db.collection("placas").insertOne(newPlaca);
-    const placaNova = await db.collection("placas").find({}).toArray();
-    return res.json(placaNova);
-  } catch (err) {
-    res.status(500).json({ message: `Erro ao cadastrar placa: ${err}` });
+      // Verificar se o arquivo foi enviado
+      if (!req.file) {
+        return res.status(400).json({ message: "Nenhuma foto foi enviada." });
+      }
+
+      // Converter a imagem para base64
+      const imagePath = req.file.path;
+      const imageBase64 = fs.readFileSync(imagePath, { encoding: "base64" });
+
+      console.log(imageBase64);
+
+      // Chamar a API externa de OCR
+      const ocrResponse = await axios.post(
+        "https://api.ocr.space/parse/image",
+        {
+          base64Image: "data:image/jpeg;base64," + imageBase64,
+          language: "eng",
+          isOverlayRequired: "false",
+          iscreatesearchablepdf: "false",
+          issearchablepdfhidetextlayer: "false",
+        },
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            apiKey: "helloworld",
+          },
+        }
+      );
+
+      const placaNaoTratada = ocrResponse.data.ParsedResults[0].ParsedText;
+
+      const num_placa = validarPlaca(placaNaoTratada);
+
+      //res.status(200).json(ocrResponse.data);
+      // // Supondo que a resposta da API contenha o número da placa
+      // const num_placa = ocrResponse.data.plateNumber.trim();
+
+      // console.log(num_placa);
+      const placaTratada = validarPlaca(placaNaoTratada);
+
+      if (!placaNaoTratada) {
+        return res.status(400).json({ message: "placa inválida" });
+      }
+
+      const agora = new Date();
+
+      const newPlaca: placas = {
+        num_placa: placaTratada as unknown as string,
+        cidade,
+        foto: req.file.path,
+        horario_registro: agora.toLocaleTimeString("pt-BR"), // Horário do registro
+        data_registro: agora.toLocaleDateString("pt-BR"), // Data do registro
+      };
+
+      await db.collection("placas").insertOne(newPlaca);
+      const placaNova = await db.collection("placas").find({}).toArray();
+      return res.json(placaNova);
+    } catch (err) {
+      res.status(500).json({ message: `Erro ao cadastrar placa: ${err}` });
+    }
   }
-});
+);
+
+function validarPlaca(responseOCR: string) {
+  // Expressão regular para encontrar a placa Mercosul
+  const placaPattern = /[A-Z]{3}[0-9][A-Z][0-9]{2}/;
+
+  // Encontrando a placa na string
+
+  const placa = responseOCR.match(placaPattern);
+
+  // Exibindo o resultado
+  if (placa) {
+    console.log(`Placa encontrada: ${placa[0]}`);
+    return placa[0];
+  } else {
+    return;
+  }
+}
 
 //exibe a placa passada na rota
 rotas_placas.get("/consulta/:placa", async (req: Request, res: Response) => {
@@ -56,7 +131,6 @@ rotas_placas.get(
   async (req: Request, res: Response) => {
     const cidadeFiltrada = req.params.cidade;
 
-    //const fs = require("fs");
     var PDFDocument = require("pdfkit");
 
     try {
