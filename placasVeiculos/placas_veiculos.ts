@@ -5,6 +5,8 @@ import path from "path";
 import axios from "axios";
 import { connectToDatabase } from "../database/databaseConfig";
 import { placas } from "../interface/interface_placa";
+import { Users } from "../interface/interface_user";
+const bcrypt = require("bcrypt");
 
 const rotas_placas = express.Router();
 
@@ -173,5 +175,68 @@ rotas_placas.get(
     }
   }
 );
+
+//rota de cadastro do ususuario no banco
+rotas_placas.post("/cadastro", async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  try {
+    const db = await connectToDatabase();
+    //busca usuario já cadastrado
+    const user = await db.collection("usuarios").findOne({ email });
+    console.log(email);
+
+    if (user) {
+      return res.status(400).send({ message: "Email já cadastrado" });
+    }
+
+    const criptPassword = await bcrypt.hash(password, 10);
+    //pega o novo usuaroi
+    const novoUsuario: Users = {
+      email,
+      password: criptPassword,
+    };
+    //insere o novo usuario no banco
+    const result = await db.collection("usuarios").insertOne(novoUsuario);
+    if (result.acknowledged) {
+      console.log(result.insertedId);
+      return res
+        .status(201)
+        .send({ message: "Usuario cadastrado com sucesso", result });
+    } else {
+      return res.status(500).send({ message: "Erro ao cadastrar usuario" });
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Erro ao cadastrar usuario" });
+  }
+});
+
+//rota do login do user
+// essa rota ira receber o email e senha e devolve um token
+// rotas_placas.post("/login", async (req: Request, res: Response) => {
+//   const { email, password } = req.body;
+//   try {
+//     const db = await connectToDatabase();
+//     const user = await db.collection("usuarios").findOne({ email });
+//     if (!user) {
+//       return res.status(400).send({ message: "Email não encontrado" });
+//     }
+//     const comparePassword = await bcrypt.compare(password, user.password);
+//     if (!comparePassword) {
+//       return res.status(400).send({ message: "Senha incorreta" });
+//     }
+//     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
+//       expiresIn: "1h",
+//     });
+//     return res.status(200).send({ token });
+//   } catch (error) {
+//     console.log(error);
+//     return res.status(500).json({ message: "Erro ao fazer login" });
+//   }
+// });
+
+// rota do video
+rotas_placas.post("/videoTutorial", () => {});
 
 export default rotas_placas;
