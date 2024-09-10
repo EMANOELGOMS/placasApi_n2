@@ -6,7 +6,9 @@ import axios from "axios";
 import { connectToDatabase } from "../database/databaseConfig";
 import { placas } from "../interface/interface_placa";
 import { Users } from "../interface/interface_user";
+
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const rotas_placas = express.Router();
 
@@ -15,6 +17,7 @@ const upload = multer({ dest: "uploads/" });
 // POST /cadastroPlaca - Adicionar uma nova placa com OCR
 rotas_placas.post(
   "/cadastroPlaca",
+  ValidationToken,
   upload.single("foto"),
   async (req: Request, res: Response) => {
     try {
@@ -104,32 +107,37 @@ function validarPlaca(responseOCR: string) {
 }
 
 //exibe a placa passada na rota
-rotas_placas.get("/consulta/:placa", async (req: Request, res: Response) => {
-  const placaFilter = req.params.placa;
-  try {
-    const db = await connectToDatabase();
+rotas_placas.get(
+  "/consulta/:placa",
+  ValidationToken,
+  async (req: Request, res: Response) => {
+    const placaFilter = req.params.placa;
+    try {
+      const db = await connectToDatabase();
 
-    console.log("Placa filtrada:", placaFilter);
+      console.log("Placa filtrada:", placaFilter);
 
-    const filtrandoPlaca = { num_placa: placaFilter };
+      const filtrandoPlaca = { num_placa: placaFilter };
 
-    const placa = await db.collection("placas").findOne(filtrandoPlaca);
+      const placa = await db.collection("placas").findOne(filtrandoPlaca);
 
-    console.log("Placa encontrada:", placa);
+      console.log("Placa encontrada:", placa);
 
-    if (placa) {
-      return res.json(placa);
-    } else {
-      return res.status(404).send({ message: "Placa não encontrada" });
+      if (placa) {
+        return res.json(placa);
+      } else {
+        return res.status(404).send({ message: "Placa não encontrada" });
+      }
+    } catch (err) {
+      console.error("Erro ao consultar placa:", err);
+      res.status(500).json({ message: `Erro ao consultar placa: ${err}` });
     }
-  } catch (err) {
-    console.error("Erro ao consultar placa:", err);
-    res.status(500).json({ message: `Erro ao consultar placa: ${err}` });
   }
-});
+);
 
 rotas_placas.get(
   "/relatorio/cidade/:cidade",
+  ValidationToken,
   async (req: Request, res: Response) => {
     const cidadeFiltrada = req.params.cidade;
 
@@ -198,6 +206,7 @@ rotas_placas.post("/cadastro", async (req: Request, res: Response) => {
     };
     //insere o novo usuario no banco
     const result = await db.collection("usuarios").insertOne(novoUsuario);
+    // quando é apenas um dado result.acknowledged para verificar no BD
     if (result.acknowledged) {
       console.log(result.insertedId);
       return res
@@ -212,29 +221,57 @@ rotas_placas.post("/cadastro", async (req: Request, res: Response) => {
   }
 });
 
-//rota do login do user
+async function ValidationToken(req: Request, res: Response, next: any) {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: "Token não encontrado" });
+  }
+  const db = await connectToDatabase();
+
+  const usersCollectionToken = db.collection("usuarios");
+  const user = await usersCollectionToken.findOne({ token });
+  console.log(token);
+
+  if (!user) {
+    return res.status(401).json({ message: "Token inválido" });
+  }
+  next();
+}
+
+// rota do login do user
 // essa rota ira receber o email e senha e devolve um token
-// rotas_placas.post("/login", async (req: Request, res: Response) => {
-//   const { email, password } = req.body;
-//   try {
-//     const db = await connectToDatabase();
-//     const user = await db.collection("usuarios").findOne({ email });
-//     if (!user) {
-//       return res.status(400).send({ message: "Email não encontrado" });
-//     }
-//     const comparePassword = await bcrypt.compare(password, user.password);
-//     if (!comparePassword) {
-//       return res.status(400).send({ message: "Senha incorreta" });
-//     }
-//     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
-//       expiresIn: "1h",
-//     });
-//     return res.status(200).send({ token });
-//   } catch (error) {
-//     console.log(error);
-//     return res.status(500).json({ message: "Erro ao fazer login" });
-//   }
-// });
+rotas_placas.post("/login", async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  try {
+    const db = await connectToDatabase();
+    const user = await db.collection("usuarios").findOne({ email });
+    if (!user) {
+      return res.status(400).send({ message: "Email não encontrado" });
+    }
+    const comparePassword = await bcrypt.compare(password, user.password);
+    if (!comparePassword) {
+      return res.status(400).send({ message: "Senha incorreta" });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    const usersCollection = db.collection("usuarios");
+    const userUpdate = await usersCollection.updateOne(
+      { _id: user._id },
+      { $set: { token } }
+    );
+    if (userUpdate.modifiedCount === 1) {
+      return res.status(200).send({ token });
+    } else {
+      return res.status(500).send({ message: "Erro ao gerar token" });
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Erro ao fazer login" });
+  }
+});
 
 // rota do video
 rotas_placas.post("/videoTutorial", () => {});
