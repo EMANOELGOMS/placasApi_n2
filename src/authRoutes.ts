@@ -206,3 +206,50 @@ export const loginUsuario = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Erro ao fazer login" });
   }
 };
+
+// Função para criar o vídeo
+const createVideo = async (
+  title: string,
+  description: string,
+  url: string,
+  user_id: string
+) => {
+  try {
+    const db = await connectToDatabase();
+    const videoCollection = db.collection("videos");
+    const result = await videoCollection.insertOne({
+      title,
+      description,
+      url,
+      user_id,
+      created_at: new Date(),
+    });
+
+    // Retorna o vídeo inserido usando o insertedId
+    return await videoCollection.findOne({ _id: result.insertedId });
+  } catch (error) {
+    console.error("Error creating video:", error);
+    throw new Error("Falha na criação do video");
+  }
+};
+
+// Rota para o vídeo tutorial
+export const videoTutorial = async (req: Request, res: Response) => {
+  const { title, description, url, user_id } = req.body;
+
+  if (!title || !description || !url || !user_id) {
+    return res.status(400).json({ error: "Coloque os parametros de entrada" });
+  }
+
+  try {
+    const video = await createVideo(title, description, url, user_id);
+    if (!video) {
+      return res.status(500).json({ error: "Falha na criação do video" });
+    }
+    return res.status(201).json(video);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Erro na construção do video", error });
+  }
+};
