@@ -10,7 +10,6 @@ export async function ValidationToken(req: Request, res: Response, next: any) {
 
   const usersCollectionToken = db.collection("usuarios");
   const user = await usersCollectionToken.findOne({ token });
-  console.log(token);
 
   if (!user) {
     return res.status(401).json({ message: "Token inválido" });
