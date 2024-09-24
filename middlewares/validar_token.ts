@@ -13,6 +13,7 @@ export async function ValidationToken(req: Request, res: Response, next: any) {
   console.log(token);
 
   if (!user) {
+    console.log("Token inválido");
     return res.status(401).json({ message: "Token inválido" });
   }
   next();

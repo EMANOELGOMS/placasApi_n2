@@ -7,6 +7,7 @@ import {
   getCidades,
   getPlacas,
   loginUsuario,
+  videoTutorial,
 } from "../src/authRoutes";
 
 const rotas_placas = express.Router();
@@ -33,12 +34,6 @@ rotas_placas.post("/cadastro", cadastroUsuarios);
 rotas_placas.post("/login", loginUsuario);
 
 // rota do video
-rotas_placas.post(
-  "/videoTutorial",
-  ValidationToken,
-  async (req: Request, res: Response) => {
-    const { title, description, url, user_id } = req.body;
-  }
-);
+rotas_placas.post("/videoTutorial", ValidationToken, videoTutorial);
 
 export default rotas_placas;

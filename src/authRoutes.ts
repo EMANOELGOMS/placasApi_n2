@@ -4,9 +4,10 @@ import axios from "axios";
 import { connectToDatabase } from "../database/databaseConfig";
 import { placas } from "../interface/interface_placa";
 import { validarPlaca } from "../middlewares/validation_placas";
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+
 import { Users } from "../interface/interface_user";
+import bcrypt from "bcrypt";
+const jwt = require("jsonwebtoken");
 
 export const cadastrar_placa = async (req: Request, res: Response) => {
   try {
@@ -105,34 +106,36 @@ export const getCidades = async (req: Request, res: Response) => {
     const placaData = await db
       .collection("placas")
       .findOne({ cidade: cidadeFiltrada });
+    console.log("findOne", placaData);
 
-    if (placaData) {
-      const doc = new PDFDocument();
-
-      // Configura o cabeçalho da resposta HTTP para enviar um PDF
-      res.setHeader(
-        "Content-disposition",
-        `attachment; filename=relatorio_${cidadeFiltrada}.pdf`
-      );
-      res.setHeader("Content-type", "application/pdf");
-
-      // Criar o conteúdo do PDF
-      doc.fontSize(25).text("Relatório da Placa", { align: "center" });
-      doc.moveDown();
-      doc.fontSize(16).text(`Cidade: ${cidadeFiltrada}`);
-      doc.moveDown();
-
-      // Adiciona informações da placa ao PDF
-      doc.fontSize(14).text(`Placa: ${placaData.num_placa}`);
-      doc.text(`Data do registro: ${placaData.data_registro}`);
-      doc.text(`Horario do registro: ${placaData.horario_registro}`);
-      doc.text(`Foto: ${placaData.foto}`);
-
-      doc.pipe(res);
-      doc.end();
-    } else {
+    if (!placaData) {
+      console.log("estouuuu 404");
       return res.status(404).send({ message: "Nenhum registro encontrado" });
+    } else {
     }
+    const doc = new PDFDocument();
+
+    // Configura o cabeçalho da resposta HTTP para enviar um PDF
+    res.setHeader(
+      "Content-disposition",
+      `attachment; filename=relatorio_${cidadeFiltrada}.pdf`
+    );
+    res.setHeader("Content-type", "application/pdf");
+
+    // Criar o conteúdo do PDF
+    doc.fontSize(25).text("Relatório da Placa", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(16).text(`Cidade: ${cidadeFiltrada}`);
+    doc.moveDown();
+
+    // Adiciona informações da placa ao PDF
+    doc.fontSize(14).text(`Placa: ${placaData.num_placa}`);
+    doc.text(`Data do registro: ${placaData.data_registro}`);
+    doc.text(`Horario do registro: ${placaData.horario_registro}`);
+    doc.text(`Foto: ${placaData.foto}`);
+
+    doc.pipe(res);
+    doc.end();
   } catch (err) {
     res.status(500).json({ message: `Erro ao consultar relatório: ${err}` });
   }
@@ -140,14 +143,18 @@ export const getCidades = async (req: Request, res: Response) => {
 
 export const cadastroUsuarios = async (req: Request, res: Response) => {
   const { email, password } = req.body;
+  console.log("corpo da requisição", req.body);
 
   try {
     const db = await connectToDatabase();
     //busca usuario já cadastrado
     const user = await db.collection("usuarios").findOne({ email });
-    console.log(email);
+    console.log("email buscado", email);
+    console.log("email do banco", user);
 
     if (user) {
+      console.log("Email já cadastrado");
+
       return res.status(400).send({ message: "Email já cadastrado" });
     }
 
@@ -170,6 +177,8 @@ export const cadastroUsuarios = async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.log(error);
+    console.log("Erro ao cadastrar usuario");
+
     return res.status(500).json({ message: "Erro ao cadastrar usuario" });
   }
 };
@@ -179,11 +188,17 @@ export const loginUsuario = async (req: Request, res: Response) => {
   try {
     const db = await connectToDatabase();
     const user = await db.collection("usuarios").findOne({ email });
+    console.log("usuario_email1: ", user);
+
     if (!user) {
+      console.log("Email não encontrado");
+
       return res.status(400).send({ message: "Email não encontrado" });
     }
     const comparePassword = await bcrypt.compare(password, user.password);
     if (!comparePassword) {
+      console.log("Senha incorreta");
+
       return res.status(400).send({ message: "Senha incorreta" });
     }
 
@@ -196,13 +211,64 @@ export const loginUsuario = async (req: Request, res: Response) => {
       { _id: user._id },
       { $set: { token } }
     );
+    console.log("usuario update", userUpdate);
     if (userUpdate.modifiedCount === 1) {
+      console.log("token:hg", token);
+
       return res.status(200).send({ token });
     } else {
+      console.log("Erro ao gerar token");
+
       return res.status(500).send({ message: "Erro ao gerar token" });
     }
   } catch (error) {
-    console.log(error);
+    console.log("Erro ao fazer login", error);
     return res.status(500).json({ message: "Erro ao fazer login" });
+  }
+};
+
+// Função para criar o vídeo
+const createVideo = async (
+  title: string,
+  description: string,
+  url: string,
+  user_id: string
+) => {
+  try {
+    const db = await connectToDatabase();
+    const videoCollection = db.collection("videos");
+    const result = await videoCollection.insertOne({
+      title,
+      description,
+      url,
+      user_id,
+      created_at: new Date(),
+    });
+
+    // Retorna o vídeo inserido usando o insertedId
+    return await videoCollection.findOne({ _id: result.insertedId });
+  } catch (error) {
+    throw new Error("Falha na criação do video");
+  }
+};
+
+// Rota para o vídeo tutorial
+export const videoTutorial = async (req: Request, res: Response) => {
+  const { title, description, url, user_id } = req.body;
+
+  if (!title || !description || !url || !user_id) {
+    return res.status(400).json({ error: "Coloque os parametros de entrada" });
+  }
+
+  try {
+    const video = await createVideo(title, description, url, user_id);
+    if (!video) {
+      return res.status(500).json({ error: "Falha na criação do video" });
+    }
+    return res.status(201).json(video);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Erro na construção do video", error });
   }
 };
