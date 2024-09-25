@@ -140,11 +140,8 @@ export const cadastroUsuarios = async (req: Request, res: Response) => {
     const db = await connectToDatabase();
     //busca usuario já cadastrado
     const user = await db.collection("usuarios").findOne({ email });
-<<<<<<< HEAD
     console.log("email buscado", email);
     console.log("email do banco", user);
-=======
->>>>>>> 2f0de5d5be72c366633f0d0b4f1e7faa0175201a
 
     if (user) {
       console.log("Email já cadastrado");
@@ -169,16 +166,10 @@ export const cadastroUsuarios = async (req: Request, res: Response) => {
       return res.status(500).send({ message: "Erro ao cadastrar usuario" });
     }
   } catch (error) {
-<<<<<<< HEAD
     console.log(error);
     console.log("Erro ao cadastrar usuario");
 
     return res.status(500).json({ message: "Erro ao cadastrar usuario" });
-=======
-    return res
-      .status(500)
-      .json({ message: "Erro ao cadastrar usuario", error });
->>>>>>> 2f0de5d5be72c366633f0d0b4f1e7faa0175201a
   }
 };
 
@@ -221,12 +212,8 @@ export const loginUsuario = async (req: Request, res: Response) => {
       return res.status(500).send({ message: "Erro ao gerar token" });
     }
   } catch (error) {
-<<<<<<< HEAD
     console.log("Erro ao fazer login", error);
     return res.status(500).json({ message: "Erro ao fazer login" });
-=======
-    return res.status(500).json({ message: "Erro ao fazer login", error });
->>>>>>> 2f0de5d5be72c366633f0d0b4f1e7faa0175201a
   }
 };
 
@@ -275,7 +262,3 @@ export const videoTutorial = async (req: Request, res: Response) => {
       .json({ message: "Erro na construção do video", error });
   }
 };
-<<<<<<< HEAD
-=======
-//link do video https://drive.google.com/file/d/1C-1tf1WzOvwEPZ6JnU42kwcYIg6ObbhX/view?usp=drive_link
->>>>>>> 2f0de5d5be72c366633f0d0b4f1e7faa0175201a
