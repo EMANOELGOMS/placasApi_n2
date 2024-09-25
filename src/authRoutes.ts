@@ -81,7 +81,6 @@ export const getPlacas = async (req: Request, res: Response) => {
       return res.status(404).send({ message: "Placa não encontrada" });
     }
   } catch (err) {
-    console.error("Erro ao consultar placa:", err);
     res.status(500).json({ message: `Erro ao consultar placa: ${err}` });
   }
 };
@@ -97,10 +96,8 @@ export const getCidades = async (req: Request, res: Response) => {
     const placaData = await db
       .collection("placas")
       .findOne({ cidade: cidadeFiltrada });
-    console.log("findOne", placaData);
 
     if (!placaData) {
-      console.log("estouuuu 404");
       return res.status(404).send({ message: "Nenhum registro encontrado" });
     } else {
     }
@@ -134,18 +131,13 @@ export const getCidades = async (req: Request, res: Response) => {
 
 export const cadastroUsuarios = async (req: Request, res: Response) => {
   const { email, password } = req.body;
-  console.log("corpo da requisição", req.body);
 
   try {
     const db = await connectToDatabase();
     //busca usuario já cadastrado
     const user = await db.collection("usuarios").findOne({ email });
-    console.log("email buscado", email);
-    console.log("email do banco", user);
 
     if (user) {
-      console.log("Email já cadastrado");
-
       return res.status(400).send({ message: "Email já cadastrado" });
     }
 
@@ -166,9 +158,6 @@ export const cadastroUsuarios = async (req: Request, res: Response) => {
       return res.status(500).send({ message: "Erro ao cadastrar usuario" });
     }
   } catch (error) {
-    console.log(error);
-    console.log("Erro ao cadastrar usuario");
-
     return res.status(500).json({ message: "Erro ao cadastrar usuario" });
   }
 };
@@ -178,17 +167,12 @@ export const loginUsuario = async (req: Request, res: Response) => {
   try {
     const db = await connectToDatabase();
     const user = await db.collection("usuarios").findOne({ email });
-    console.log("usuario_email1: ", user);
 
     if (!user) {
-      console.log("Email não encontrado");
-
       return res.status(400).send({ message: "Email não encontrado" });
     }
     const comparePassword = await bcrypt.compare(password, user.password);
     if (!comparePassword) {
-      console.log("Senha incorreta");
-
       return res.status(400).send({ message: "Senha incorreta" });
     }
 
@@ -201,18 +185,12 @@ export const loginUsuario = async (req: Request, res: Response) => {
       { _id: user._id },
       { $set: { token } }
     );
-    console.log("usuario update", userUpdate);
     if (userUpdate.modifiedCount === 1) {
-      console.log("token:hg", token);
-
       return res.status(200).send({ token });
     } else {
-      console.log("Erro ao gerar token");
-
       return res.status(500).send({ message: "Erro ao gerar token" });
     }
   } catch (error) {
-    console.log("Erro ao fazer login", error);
     return res.status(500).json({ message: "Erro ao fazer login" });
   }
 };
